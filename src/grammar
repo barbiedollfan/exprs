@@ -1,0 +1,7 @@
+expression ::= term (('+' | '-') term)*
+term ::= unary (('*' | '/' | '%') unary)*
+unary ::= ['-'] power
+power ::= factor ('^' power)*
+factor ::= (expression) | call | number
+call ::= identifier ['(' list ')']
+list ::= expression ('(' ',' expression ')')*
