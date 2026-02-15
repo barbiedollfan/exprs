@@ -1,3 +1,19 @@
+mod functions;
+
+use functions::*;
+
+use statrs::function::beta::beta;
+use statrs::function::erf::erf;
+use statrs::function::erf::erfc;
+use statrs::function::factorial::binomial;
+use statrs::function::factorial::factorial;
+use statrs::function::gamma::digamma;
+use statrs::function::gamma::gamma;
+
+use std::f64::consts::E;
+use std::f64::consts::PI;
+// TODO: Add Phi and Euler Mascheroni
+
 #[derive(Debug)]
 enum Token {
     Num(f64),
@@ -11,7 +27,7 @@ enum Token {
     LPar,
     RPar,
     Comma,
-    EOF
+    EOF,
 }
 
 struct Lexer {
@@ -36,23 +52,29 @@ impl Lexer {
 }
 
 fn tokenize(input: &str) -> Vec<Token> {
-    let mut stream = Lexer {source: input.chars().collect(), cursor: 0};
+    let mut stream = Lexer {
+        source: input.chars().collect(),
+        cursor: 0,
+    };
     let mut tokens: Vec<Token> = Vec::new();
     loop {
         let next = stream.consume();
         match next {
-            None => {tokens.push(Token::EOF); return tokens;},
-            Some(c) if c.is_ascii_whitespace() => {}, 
-            Some(c) if c == '+' => tokens.push(Token::Plus), 
-            Some(c) if c == '-' => tokens.push(Token::Minus), 
-            Some(c) if c == '*' => tokens.push(Token::Mul), 
-            Some(c) if c == '/' => tokens.push(Token::Div), 
-            Some(c) if c == '%' => tokens.push(Token::Mod), 
-            Some(c) if c == '^' => tokens.push(Token::Exp), 
-            Some(c) if c == '(' => tokens.push(Token::LPar), 
-            Some(c) if c == ')' => tokens.push(Token::RPar), 
-            Some(c) if c == ',' => tokens.push(Token::Comma), 
-            Some(c) if c.is_ascii_digit() || c == '.' => { 
+            None => {
+                tokens.push(Token::EOF);
+                return tokens;
+            }
+            Some(c) if c.is_ascii_whitespace() => {}
+            Some(c) if c == '+' => tokens.push(Token::Plus),
+            Some(c) if c == '-' => tokens.push(Token::Minus),
+            Some(c) if c == '*' => tokens.push(Token::Mul),
+            Some(c) if c == '/' => tokens.push(Token::Div),
+            Some(c) if c == '%' => tokens.push(Token::Mod),
+            Some(c) if c == '^' => tokens.push(Token::Exp),
+            Some(c) if c == '(' => tokens.push(Token::LPar),
+            Some(c) if c == ')' => tokens.push(Token::RPar),
+            Some(c) if c == ',' => tokens.push(Token::Comma),
+            Some(c) if c.is_ascii_digit() || c == '.' => {
                 let mut buff: Vec<char> = Vec::new();
                 buff.push(c);
                 while let Some(num) = stream.consume() {
@@ -65,9 +87,9 @@ fn tokenize(input: &str) -> Vec<Token> {
                 let mut buff = buff.iter().cloned().collect::<String>();
                 match buff.parse::<f64>() {
                     Ok(value) => tokens.push(Token::Num(value)),
-                    Err(_) => panic!()
+                    Err(_) => panic!(),
                 }
-            },
+            }
             Some(c) if c.is_ascii_alphabetic() => {
                 let mut buff: Vec<char> = Vec::new();
                 buff.push(c);
@@ -80,7 +102,7 @@ fn tokenize(input: &str) -> Vec<Token> {
                 stream.back();
                 let mut buff = buff.iter().cloned().collect::<String>();
                 tokens.push(Token::Id(buff));
-            },
+            }
             _ => {}
         }
     }
