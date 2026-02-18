@@ -1,7 +1,7 @@
-expression ::= term (('+' | '-') term)*
-term ::= unary (('*' | '/' | '%') unary)*
-unary ::= ['-'] power
-power ::= factor ('^' power)*
-factor ::= (expression) | call | number
-call ::= identifier ['(' list ')']
-list ::= expression ('(' ',' expression ')')*
+<expression> ::= <term> { ('+' | '-') <term> }*
+<term> ::= <base> { ('*' | '/' | '%') <base> }*
+<base> ::= ['-'] <power>
+<power> ::= <factor> { '^' <power> }*
+<factor> ::= '(' <expression> ')' | <call> | number
+<call> ::= identifier [ '(' <args> ')' ]
+<args> ::= <expression> [ '(' ',' <expression> ')' ]
