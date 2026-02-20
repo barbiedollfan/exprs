@@ -99,6 +99,7 @@ impl Ast {
                     Operator::Floor => results[*child].floor(),
                     Operator::Ln => results[*child].ln(),
                     Operator::Exp => results[*child].exp(),
+                    Operator::Sqrt => results[*child].sqrt(),
 
                     Operator::Sin => results[*child].sin(),
                     Operator::Cos => results[*child].cos(),
@@ -177,6 +178,7 @@ pub enum Operator {
     Floor,
     Ln,
     Exp,
+    Sqrt,
 
     Sin,
     Cos,
@@ -210,6 +212,71 @@ pub enum Operator {
     Log,
 }
 
+pub fn id_type(name: &str) -> IdType {
+    match name {
+        // Unary functions
+        "abs" => IdType::Un(Operator::Abs),
+        "ceil" => IdType::Un(Operator::Ceil),
+        "floor" => IdType::Un(Operator::Floor),
+        "ln" => IdType::Un(Operator::Ln),
+        "exp" => IdType::Un(Operator::Exp),
+        "sqrt" => IdType::Un(Operator::Sqrt),
+
+        "sin" => IdType::Un(Operator::Sin),
+        "cos" => IdType::Un(Operator::Cos),
+        "tan" => IdType::Un(Operator::Tan),
+        "csc" => IdType::Un(Operator::Csc),
+        "sec" => IdType::Un(Operator::Sec),
+        "cot" => IdType::Un(Operator::Cot),
+
+        "asin" => IdType::Un(Operator::Asin),
+        "acos" => IdType::Un(Operator::Acos),
+        "atan" => IdType::Un(Operator::Atan),
+        "acsc" => IdType::Un(Operator::Acsc),
+        "asec" => IdType::Un(Operator::Asec),
+        "acot" => IdType::Un(Operator::Acot),
+
+        "sinh" => IdType::Un(Operator::Sinh),
+        "cosh" => IdType::Un(Operator::Cosh),
+        "tanh" => IdType::Un(Operator::Tanh),
+        "csch" => IdType::Un(Operator::Csch),
+        "sech" => IdType::Un(Operator::Sech),
+        "coth" => IdType::Un(Operator::Coth),
+
+        "asinh" => IdType::Un(Operator::Asinh),
+        "acosh" => IdType::Un(Operator::Acosh),
+        "atanh" => IdType::Un(Operator::Atanh),
+        "acsch" => IdType::Un(Operator::Acsch),
+        "asech" => IdType::Un(Operator::Asech),
+        "acoth" => IdType::Un(Operator::Acoth),
+
+        // Binary functions
+        "min" => IdType::Bin(Operator::Min),
+        "max" => IdType::Bin(Operator::Max),
+        "log" => IdType::Bin(Operator::Log),
+
+        "pi" => IdType::Const(PI),
+        "e" => IdType::Const(E),
+        "masch" => IdType::Const(MASCH),
+        "phi" => IdType::Const(PHI),
+
+        _ => IdType::None,
+    }
+}
+
+const PI: f64 = 3.14159265358979323846264338327950288419716939937510;
+const E: f64 = 2.71828182845904523536028747135266249775724709369995;
+const MASCH: f64 = 0.57721566490153286060651209008240243104215933593992;
+const PHI: f64 = 1.61803398874989484820458683436563811772030917980576;
+
+#[derive(Debug)]
+pub enum IdType {
+    Bin(Operator),
+    Un(Operator),
+    Const(f64),
+    None,
+}
+
 #[derive(Debug)]
 pub enum Node {
     Un(UnaryExp),
@@ -229,11 +296,4 @@ pub struct BinaryExp {
     pub op: Operator,
     pub left: usize,
     pub right: usize,
-}
-
-#[derive(Debug)]
-pub enum FnSig {
-    Bin(Operator),
-    Un(Operator),
-    None,
 }

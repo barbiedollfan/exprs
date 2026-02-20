@@ -4,4 +4,6 @@ mod structs;
 
 use parser::parse;
 
-fn main() {}
+fn main() {
+    println!("{}", parse("ln(e) + sin(pi) + phi").eval());
+}

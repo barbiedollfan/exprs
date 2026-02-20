@@ -1,58 +1,13 @@
 use crate::lexer::tokenize;
+use crate::structs::id_type;
 use crate::structs::{Ast, Parser, Token};
 use crate::structs::{BinaryExp, Operator, UnaryExp};
-use crate::structs::{FnSig, Node};
-
-fn get_signature(name: &str) -> FnSig {
-    match name {
-        // Unary functions
-        "abs" => FnSig::Un(Operator::Abs),
-        "ceil" => FnSig::Un(Operator::Ceil),
-        "floor" => FnSig::Un(Operator::Floor),
-        "ln" => FnSig::Un(Operator::Ln),
-        "exp" => FnSig::Un(Operator::Exp),
-
-        "sin" => FnSig::Un(Operator::Sin),
-        "cos" => FnSig::Un(Operator::Cos),
-        "tan" => FnSig::Un(Operator::Tan),
-        "csc" => FnSig::Un(Operator::Csc),
-        "sec" => FnSig::Un(Operator::Sec),
-        "cot" => FnSig::Un(Operator::Cot),
-
-        "asin" => FnSig::Un(Operator::Asin),
-        "acos" => FnSig::Un(Operator::Acos),
-        "atan" => FnSig::Un(Operator::Atan),
-        "acsc" => FnSig::Un(Operator::Acsc),
-        "asec" => FnSig::Un(Operator::Asec),
-        "acot" => FnSig::Un(Operator::Acot),
-
-        "sinh" => FnSig::Un(Operator::Sinh),
-        "cosh" => FnSig::Un(Operator::Cosh),
-        "tanh" => FnSig::Un(Operator::Tanh),
-        "csch" => FnSig::Un(Operator::Csch),
-        "sech" => FnSig::Un(Operator::Sech),
-        "coth" => FnSig::Un(Operator::Coth),
-
-        "asinh" => FnSig::Un(Operator::Asinh),
-        "acosh" => FnSig::Un(Operator::Acosh),
-        "atanh" => FnSig::Un(Operator::Atanh),
-        "acsch" => FnSig::Un(Operator::Acsch),
-        "asech" => FnSig::Un(Operator::Asech),
-        "acoth" => FnSig::Un(Operator::Acoth),
-
-        // Binary functions
-        "min" => FnSig::Bin(Operator::Min),
-        "max" => FnSig::Bin(Operator::Max),
-        "log" => FnSig::Bin(Operator::Log),
-
-        _ => FnSig::None,
-    }
-}
+use crate::structs::{IdType, Node};
 
 fn parse_call(tree: &mut Ast, stream: &mut Parser) -> usize {
     let id = stream.iter.consume().unwrap().get_id();
-    match get_signature(id) {
-        FnSig::Un(op) => {
+    match id_type(id) {
+        IdType::Un(op) => {
             let Some(Token::LPar) = stream.iter.consume() else {
                 panic!("Functions cannot be used as variable names");
             };
@@ -65,7 +20,7 @@ fn parse_call(tree: &mut Ast, stream: &mut Parser) -> usize {
             let node = UnaryExp { op: op, child: arg };
             return tree.add(Node::Un(node));
         }
-        FnSig::Bin(op) => {
+        IdType::Bin(op) => {
             let Some(Token::LPar) = stream.iter.consume() else {
                 panic!("Functions cannot be used as variable names");
             };
@@ -83,6 +38,9 @@ fn parse_call(tree: &mut Ast, stream: &mut Parser) -> usize {
                 right: second_arg,
             };
             return tree.add(Node::Bin(node));
+        }
+        IdType::Const(n) => {
+            return tree.add(Node::Num(n));
         }
         _ => {
             if let Some(Token::LPar) = stream.iter.peek() {
