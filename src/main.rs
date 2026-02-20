@@ -1,4 +1,3 @@
-mod functions;
 mod lexer;
 mod parser;
 mod structs;

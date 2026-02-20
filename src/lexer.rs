@@ -1,6 +1,6 @@
 use crate::structs::{Lexer, Token};
 
-pub fn tokenize(input: &str) -> Vec<Token> {
+pub fn tokenize<'a>(input: &'a str) -> Vec<Token<'a>> {
     let mut stream = Lexer::new(input);
     let mut tokens: Vec<Token> = Vec::new();
     loop {
@@ -16,7 +16,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             Some(c) if c == '*' => tokens.push(Token::Mul),
             Some(c) if c == '/' => tokens.push(Token::Div),
             Some(c) if c == '%' => tokens.push(Token::Mod),
-            Some(c) if c == '^' => tokens.push(Token::Exp),
+            Some(c) if c == '^' => tokens.push(Token::Pow),
             Some(c) if c == '(' => tokens.push(Token::LPar),
             Some(c) if c == ')' => tokens.push(Token::RPar),
             Some(c) if c == ',' => tokens.push(Token::Comma),
