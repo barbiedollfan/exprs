@@ -20,21 +20,33 @@ pub fn tokenize<'a>(input: &'a str) -> Vec<Token<'a>> {
             Some(c) if c == '(' => tokens.push(Token::LPar),
             Some(c) if c == ')' => tokens.push(Token::RPar),
             Some(c) if c == ',' => tokens.push(Token::Comma),
-            Some(c) if c.is_ascii_digit() || c == '.' => {
-                let mut buff: Vec<char> = Vec::new();
-                buff.push(c);
+            Some(c) if c.is_ascii_digit() => {
+                stream.iter.back();
+                let mut current: u64 = 0;
+                let mut decimals: Option<i32> = None;
                 while let Some(num) = stream.iter.consume() {
-                    if !(num.is_ascii_digit() || num == '.') {
+                    if num.is_ascii_digit() {
+                        current = current * 10 + num.to_digit(10).unwrap() as u64;
+                        if let Some(num) = decimals {
+                            decimals = Some(num + 1);
+                        }
+                    } else if num == '.' {
+                        if decimals.is_some() {
+                            panic!("Invalid number");
+                        };
+                        decimals = Some(0);
+                    } else {
                         break;
                     }
-                    buff.push(num);
                 }
                 stream.iter.back();
-                let buff = buff.iter().cloned().collect::<String>();
-                match buff.parse::<f64>() {
-                    Ok(value) => tokens.push(Token::Num(value)),
-                    Err(_) => panic!(),
-                }
+                let value = if let Some(d) = decimals {
+                    current as f64 / 10f64.powi(d)
+                } else {
+                    current as f64
+                };
+
+                tokens.push(Token::Num(value));
             }
             Some(c) if c.is_ascii_alphabetic() => {
                 let start = stream.iter.cursor - 1;

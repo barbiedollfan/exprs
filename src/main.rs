@@ -5,5 +5,5 @@ mod structs;
 use parser::parse;
 
 fn main() {
-    println!("{}", parse("ln(e) + sin(pi) + phi").eval());
+    println!("{}", parse("10 * 0.2").eval());
 }
