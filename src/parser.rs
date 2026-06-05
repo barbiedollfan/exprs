@@ -42,11 +42,14 @@ fn parse_call(tree: &mut Ast, stream: &mut Parser) -> usize {
         IdType::Const(n) => {
             return tree.add(Node::Num(n));
         }
+        IdType::Var => {
+            return tree.add(Node::Var);
+        }
         _ => {
             if let Some(Token::LPar) = stream.iter.peek() {
                 panic!("Not a function");
             } else {
-                tree.add(Node::Var)
+                panic!("Incorrect variable or function name");
             }
         }
     }
@@ -66,7 +69,7 @@ fn parse_factor(tree: &mut Ast, stream: &mut Parser) -> usize {
             stream.iter.back();
             return parse_call(tree, stream);
         }
-        _ => panic!("Idek what you did to get here"),
+        _ => panic!("Idek what you did to get here"), // This can trigger if the input is empty
     }
 }
 
