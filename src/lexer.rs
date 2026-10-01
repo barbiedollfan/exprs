@@ -1,6 +1,6 @@
 use crate::structs::{Lexer, Token};
 
-pub fn tokenize<'a>(input: &'a str) -> Vec<Token<'a>> {
+pub fn tokenize<'a>(input: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
     let mut stream = Lexer::new(input);
     let mut tokens: Vec<Token> = Vec::new();
     loop {
@@ -8,7 +8,7 @@ pub fn tokenize<'a>(input: &'a str) -> Vec<Token<'a>> {
         match next {
             None => {
                 tokens.push(Token::EOF);
-                return tokens;
+                return Ok(tokens);
             }
             Some(c) if c.is_ascii_whitespace() => {}
             Some(c) if c == '+' => tokens.push(Token::Plus),
@@ -27,12 +27,12 @@ pub fn tokenize<'a>(input: &'a str) -> Vec<Token<'a>> {
                 while let Some(num) = stream.iter.consume() {
                     if num.is_ascii_digit() {
                         current = current * 10 + num.to_digit(10).unwrap() as u64;
-                        if let Some(num) = decimals {
-                            decimals = Some(num + 1);
+                        if let Some(d) = decimals {
+                            decimals = Some(d + 1);
                         }
                     } else if num == '.' {
                         if decimals.is_some() {
-                            panic!("Invalid number");
+                            return Err("Invalid number");
                         };
                         decimals = Some(0);
                     } else {
@@ -58,7 +58,7 @@ pub fn tokenize<'a>(input: &'a str) -> Vec<Token<'a>> {
                 stream.iter.back();
                 tokens.push(Token::Id(&input[start..stream.iter.cursor]));
             }
-            _ => {}
+            _ => return Err("Unknown character in input")
         }
     }
 }

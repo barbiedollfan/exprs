@@ -1,115 +1,112 @@
-use crate::lexer::tokenize;
-use crate::structs::id_type;
-use crate::structs::{Ast, Parser, Token};
-use crate::structs::{BinaryExp, Operator, UnaryExp};
-use crate::structs::{IdType, Node};
+use crate::lexer;
+use crate::structs::{self, Ast, Parser, Token, BinaryExp, Operator, UnaryExp, IdType, Node};
 
-fn parse_call(tree: &mut Ast, stream: &mut Parser) -> usize {
+fn parse_call(tree: &mut Ast, stream: &mut Parser) -> Result<usize, &'static str> {
     let id = stream.iter.consume().unwrap().get_id();
-    match id_type(id) {
+    match structs::id_type(id) {
         IdType::Un(op) => {
             let Some(Token::LPar) = stream.iter.consume() else {
-                panic!("Functions cannot be used as variable names");
+                return Err("Functions cannot be used as variable names");
             };
-            let arg = parse_exp(tree, stream);
+            let arg = parse_exp(tree, stream)?;
             match stream.iter.consume() {
                 Some(Token::RPar) => {}
-                Some(Token::Comma) => panic!("Is not a binary function"),
-                _ => panic!("Unclosed parantheses on function call"),
+                Some(Token::Comma) => return Err("Is not a binary function"),
+                _ => return Err("Unclosed parantheses on function call"),
             }
             let node = UnaryExp { op: op, child: arg };
-            return tree.add(Node::Un(node));
+            return Ok(tree.add(Node::Un(node)));
         }
         IdType::Bin(op) => {
             let Some(Token::LPar) = stream.iter.consume() else {
-                panic!("Functions cannot be used as variable names");
+                return Err("Functions cannot be used as variable names");
             };
-            let first_arg = parse_exp(tree, stream);
+            let first_arg = parse_exp(tree, stream)?;
             let Some(Token::Comma) = stream.iter.consume() else {
-                panic!("Expected two arguments to binary function");
+                return Err("Expected two arguments to binary function");
             };
-            let second_arg = parse_exp(tree, stream);
+            let second_arg = parse_exp(tree, stream)?;
             let Some(Token::RPar) = stream.iter.consume() else {
-                panic!("Unclosed parantheses on function calls");
+                return Err("Unclosed parantheses on function calls");
             };
             let node = BinaryExp {
                 op: op,
                 left: first_arg,
                 right: second_arg,
             };
-            return tree.add(Node::Bin(node));
+            return Ok(tree.add(Node::Bin(node)));
         }
         IdType::Const(n) => {
-            return tree.add(Node::Num(n));
+            return Ok(tree.add(Node::Num(n)));
         }
         IdType::Var => {
-            return tree.add(Node::Var);
+            return Ok(tree.add(Node::Var));
         }
         _ => {
             if let Some(Token::LPar) = stream.iter.peek() {
-                panic!("Not a function");
+                return Err("Not a function");
             } else {
-                panic!("Incorrect variable or function name");
+                return Err("Incorrect variable or function name");
             }
         }
     }
 }
 
-fn parse_factor(tree: &mut Ast, stream: &mut Parser) -> usize {
+fn parse_factor(tree: &mut Ast, stream: &mut Parser) -> Result<usize, &'static str> {
     match stream.iter.consume() {
         Some(Token::LPar) => {
-            let root = parse_exp(tree, stream);
+            let root = parse_exp(tree, stream)?;
             let Some(Token::RPar) = stream.iter.consume() else {
-                panic!("Unclosed parenthesis on expression");
+                return Err("Unclosed parenthesis on expression");
             };
-            return root;
+            return Ok(root);
         }
-        Some(Token::Num(n)) => return tree.add(Node::Num(n)),
+        Some(Token::Num(n)) => return Ok(tree.add(Node::Num(n))),
         Some(Token::Id(_)) => {
             stream.iter.back();
             return parse_call(tree, stream);
         }
-        _ => panic!("Idek what you did to get here"), // This can trigger if the input is empty
+        _ => return Err("Idek what you did to get here"), // This can trigger if the input is empty
     }
 }
 
-fn parse_power(tree: &mut Ast, stream: &mut Parser) -> usize {
-    let mut root: usize = parse_factor(tree, stream);
+fn parse_power(tree: &mut Ast, stream: &mut Parser) -> Result<usize, &'static str> {
+    let mut root: usize = parse_factor(tree, stream)?;
     loop {
         let Some(Token::Pow) = stream.iter.consume() else {
             stream.iter.back();
-            return root;
+            return Ok(root);
         };
         let node = BinaryExp {
             op: Operator::Pow,
             left: root,
-            right: parse_power(tree, stream),
+            right: parse_power(tree, stream)?,
         };
         root = tree.add(Node::Bin(node));
     }
 }
 
-fn parse_base(tree: &mut Ast, stream: &mut Parser) -> usize {
+fn parse_base(tree: &mut Ast, stream: &mut Parser) -> Result<usize, &'static str> {
     if let Some(Token::Minus) = stream.iter.consume() {
         let node = UnaryExp {
             op: Operator::Minus,
-            child: parse_power(tree, stream),
+            child: parse_power(tree, stream)?,
         };
-        return tree.add(Node::Un(node));
+        return Ok(tree.add(Node::Un(node)));
     }
     stream.iter.back();
     parse_power(tree, stream)
 }
 
-fn parse_term(tree: &mut Ast, stream: &mut Parser) -> usize {
-    let mut root: usize = parse_base(tree, stream);
+fn parse_term(tree: &mut Ast, stream: &mut Parser) -> Result<usize, &'static str> {
+    let mut root: usize = parse_base(tree, stream)?;
     loop {
         match stream.iter.consume() {
             Some(Token::Mul) => {
                 let node = BinaryExp {
                     op: Operator::Mul,
                     left: root,
-                    right: parse_base(tree, stream),
+                    right: parse_base(tree, stream)?,
                 };
                 root = tree.add(Node::Bin(node));
             }
@@ -117,7 +114,7 @@ fn parse_term(tree: &mut Ast, stream: &mut Parser) -> usize {
                 let node = BinaryExp {
                     op: Operator::Div,
                     left: root,
-                    right: parse_base(tree, stream),
+                    right: parse_base(tree, stream)?,
                 };
                 root = tree.add(Node::Bin(node));
             }
@@ -125,7 +122,7 @@ fn parse_term(tree: &mut Ast, stream: &mut Parser) -> usize {
                 let node = BinaryExp {
                     op: Operator::Mod,
                     left: root,
-                    right: parse_base(tree, stream),
+                    right: parse_base(tree, stream)?,
                 };
                 root = tree.add(Node::Bin(node));
             }
@@ -135,18 +132,18 @@ fn parse_term(tree: &mut Ast, stream: &mut Parser) -> usize {
             }
         }
     }
-    root
+    Ok(root)
 }
 
-fn parse_exp(tree: &mut Ast, stream: &mut Parser) -> usize {
-    let mut root: usize = parse_term(tree, stream);
+fn parse_exp(tree: &mut Ast, stream: &mut Parser) -> Result<usize, &'static str> {
+    let mut root: usize = parse_term(tree, stream)?;
     loop {
         match stream.iter.consume() {
             Some(Token::Plus) => {
                 let node = BinaryExp {
                     op: Operator::Plus,
                     left: root,
-                    right: parse_term(tree, stream),
+                    right: parse_term(tree, stream)?,
                 };
                 root = tree.add(Node::Bin(node));
             }
@@ -154,7 +151,7 @@ fn parse_exp(tree: &mut Ast, stream: &mut Parser) -> usize {
                 let node = BinaryExp {
                     op: Operator::Minus,
                     left: root,
-                    right: parse_term(tree, stream),
+                    right: parse_term(tree, stream)?,
                 };
                 root = tree.add(Node::Bin(node));
             }
@@ -164,12 +161,12 @@ fn parse_exp(tree: &mut Ast, stream: &mut Parser) -> usize {
             }
         }
     }
-    root
+    Ok(root)
 }
 
-pub fn parse(input: &str) -> Ast {
-    let mut stream = Parser::new(tokenize(input));
+pub fn parse(input: &str) -> Result<Ast, &'static str> {
+    let mut stream = Parser::new(lexer::tokenize(input)?);
     let mut tree: Ast = Ast(Vec::new());
-    let _ = parse_exp(&mut tree, &mut stream);
-    tree
+    let _ = parse_exp(&mut tree, &mut stream)?;
+    Ok(tree)
 }

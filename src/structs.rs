@@ -70,9 +70,10 @@ pub enum Token<'a> {
 
 impl<'a> Token<'a> {
     pub fn get_id(&self) -> &'a str {
-        match self {
-            Token::Id(s) => s,
-            _ => panic!("Token does not contain an identifier"),
+        if let Token::Id(s) = self {
+            s
+        } else {
+            panic!("Token does not contain an identifier");
         }
     }
 }
