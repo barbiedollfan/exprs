@@ -53,11 +53,58 @@ pub enum Token<'a> {
 }
 
 impl<'a> Token<'a> {
-    pub fn get_id(&self) -> &'a str {
-        if let Token::Id(s) = self {
-            s
-        } else {
+    pub fn id_type(&self) -> IdType {
+        let Token::Id(name) = self else {
             panic!("Token does not contain an identifier");
+        };
+        match *name {
+            // Unary functions
+            "abs" => IdType::Un(Operator::Abs),
+            "ceil" => IdType::Un(Operator::Ceil),
+            "floor" => IdType::Un(Operator::Floor),
+            "ln" => IdType::Un(Operator::Ln),
+            "exp" => IdType::Un(Operator::Exp),
+            "sqrt" => IdType::Un(Operator::Sqrt),
+
+            "sin" => IdType::Un(Operator::Sin),
+            "cos" => IdType::Un(Operator::Cos),
+            "tan" => IdType::Un(Operator::Tan),
+            "csc" => IdType::Un(Operator::Csc),
+            "sec" => IdType::Un(Operator::Sec),
+            "cot" => IdType::Un(Operator::Cot),
+
+            "asin" => IdType::Un(Operator::Asin),
+            "acos" => IdType::Un(Operator::Acos),
+            "atan" => IdType::Un(Operator::Atan),
+            "acsc" => IdType::Un(Operator::Acsc),
+            "asec" => IdType::Un(Operator::Asec),
+            "acot" => IdType::Un(Operator::Acot),
+
+            "sinh" => IdType::Un(Operator::Sinh),
+            "cosh" => IdType::Un(Operator::Cosh),
+            "tanh" => IdType::Un(Operator::Tanh),
+            "csch" => IdType::Un(Operator::Csch),
+            "sech" => IdType::Un(Operator::Sech),
+            "coth" => IdType::Un(Operator::Coth),
+
+            "asinh" => IdType::Un(Operator::Asinh),
+            "acosh" => IdType::Un(Operator::Acosh),
+            "atanh" => IdType::Un(Operator::Atanh),
+            "acsch" => IdType::Un(Operator::Acsch),
+            "asech" => IdType::Un(Operator::Asech),
+            "acoth" => IdType::Un(Operator::Acoth),
+
+            // Binary functions
+            "min" => IdType::Bin(Operator::Min),
+            "max" => IdType::Bin(Operator::Max),
+            "log" => IdType::Bin(Operator::Log),
+
+            "pi" => IdType::Const(PI),
+            "e" => IdType::Const(E),
+            "masch" => IdType::Const(MASCH),
+            "phi" => IdType::Const(PHI),
+
+            _ => IdType::None,
         }
     }
 }
@@ -132,75 +179,6 @@ impl Ast {
                     _ => unreachable!("Incorrect handling of binary expression"),
                 },
                 Node::Num(n) => *n,
-                Node::Var => {
-                    panic!("Cannot evaluate non-constant expression")
-                }
-            };
-            results[index] = res;
-        }
-        results[self.0.len() - 1]
-    }
-    // TODO: This works even if you have no variables being used
-    pub fn eval_fn(&self, var: f64) -> f64 {
-        let mut results: Vec<f64> = vec![0.; self.0.len()];
-        for (index, node) in self.0.iter().enumerate() {
-            let res = match node {
-                Node::Un(UnaryExp { op, child }) => match op {
-                    Operator::Minus => -results[*child],
-                    Operator::Abs => results[*child].abs(),
-                    Operator::Ceil => results[*child].ceil(),
-                    Operator::Floor => results[*child].floor(),
-                    Operator::Ln => results[*child].ln(),
-                    Operator::Exp => results[*child].exp(),
-                    Operator::Sqrt => results[*child].sqrt(),
-
-                    Operator::Sin => results[*child].sin(),
-                    Operator::Cos => results[*child].cos(),
-                    Operator::Tan => results[*child].tan(),
-
-                    Operator::Csc => 1.0 / results[*child].sin(),
-                    Operator::Sec => 1.0 / results[*child].cos(),
-                    Operator::Cot => 1.0 / results[*child].tan(),
-
-                    Operator::Asin => results[*child].asin(),
-                    Operator::Acos => results[*child].acos(),
-                    Operator::Atan => results[*child].atan(),
-
-                    Operator::Acsc => (1.0 / results[*child]).asin(),
-                    Operator::Asec => (1.0 / results[*child]).acos(),
-                    Operator::Acot => (1.0 / results[*child]).atan(),
-
-                    Operator::Sinh => results[*child].sinh(),
-                    Operator::Cosh => results[*child].cosh(),
-                    Operator::Tanh => results[*child].tanh(),
-
-                    Operator::Csch => 1.0 / results[*child].sinh(),
-                    Operator::Sech => 1.0 / results[*child].cosh(),
-                    Operator::Coth => 1.0 / results[*child].tanh(),
-
-                    Operator::Asinh => results[*child].asinh(),
-                    Operator::Acosh => results[*child].acosh(),
-                    Operator::Atanh => results[*child].atanh(),
-
-                    Operator::Acsch => (1.0 / results[*child]).asinh(),
-                    Operator::Asech => (1.0 / results[*child]).acosh(),
-                    Operator::Acoth => (1.0 / results[*child]).atanh(),
-                    _ => unreachable!("Incorrect handling of unary expression"),
-                },
-                Node::Bin(BinaryExp { op, left, right }) => match op {
-                    Operator::Plus => results[*left] + results[*right],
-                    Operator::Minus => results[*left] - results[*right],
-                    Operator::Mul => results[*left] * results[*right],
-                    Operator::Div => results[*left] / results[*right],
-                    Operator::Mod => results[*left] % results[*right],
-                    Operator::Pow => results[*left].powf(results[*right]),
-                    Operator::Min => results[*left].min(results[*right]),
-                    Operator::Max => results[*left].max(results[*right]),
-                    Operator::Log => results[*left].log(results[*right]),
-                    _ => unreachable!("Incorrect handling of binary expression"),
-                },
-                Node::Num(n) => *n,
-                Node::Var => var,
             };
             results[index] = res;
         }
@@ -263,60 +241,6 @@ pub enum Operator {
     Log,
 }
 
-pub fn id_type(name: &str) -> IdType {
-    match name {
-        // Unary functions
-        "abs" => IdType::Un(Operator::Abs),
-        "ceil" => IdType::Un(Operator::Ceil),
-        "floor" => IdType::Un(Operator::Floor),
-        "ln" => IdType::Un(Operator::Ln),
-        "exp" => IdType::Un(Operator::Exp),
-        "sqrt" => IdType::Un(Operator::Sqrt),
-
-        "sin" => IdType::Un(Operator::Sin),
-        "cos" => IdType::Un(Operator::Cos),
-        "tan" => IdType::Un(Operator::Tan),
-        "csc" => IdType::Un(Operator::Csc),
-        "sec" => IdType::Un(Operator::Sec),
-        "cot" => IdType::Un(Operator::Cot),
-
-        "asin" => IdType::Un(Operator::Asin),
-        "acos" => IdType::Un(Operator::Acos),
-        "atan" => IdType::Un(Operator::Atan),
-        "acsc" => IdType::Un(Operator::Acsc),
-        "asec" => IdType::Un(Operator::Asec),
-        "acot" => IdType::Un(Operator::Acot),
-
-        "sinh" => IdType::Un(Operator::Sinh),
-        "cosh" => IdType::Un(Operator::Cosh),
-        "tanh" => IdType::Un(Operator::Tanh),
-        "csch" => IdType::Un(Operator::Csch),
-        "sech" => IdType::Un(Operator::Sech),
-        "coth" => IdType::Un(Operator::Coth),
-
-        "asinh" => IdType::Un(Operator::Asinh),
-        "acosh" => IdType::Un(Operator::Acosh),
-        "atanh" => IdType::Un(Operator::Atanh),
-        "acsch" => IdType::Un(Operator::Acsch),
-        "asech" => IdType::Un(Operator::Asech),
-        "acoth" => IdType::Un(Operator::Acoth),
-
-        // Binary functions
-        "min" => IdType::Bin(Operator::Min),
-        "max" => IdType::Bin(Operator::Max),
-        "log" => IdType::Bin(Operator::Log),
-
-        "pi" => IdType::Const(PI),
-        "e" => IdType::Const(E),
-        "masch" => IdType::Const(MASCH),
-        "phi" => IdType::Const(PHI),
-
-        "x" => IdType::Var,
-
-        _ => IdType::None,
-    }
-}
-
 const PI: f64 = 3.14159265358979323846264338327950288419716939937510;
 const E: f64 = 2.71828182845904523536028747135266249775724709369995;
 const MASCH: f64 = 0.57721566490153286060651209008240243104215933593992;
@@ -327,7 +251,6 @@ pub enum IdType {
     Bin(Operator),
     Un(Operator),
     Const(f64),
-    Var,
     None,
 }
 
@@ -336,7 +259,6 @@ pub enum Node {
     Un(UnaryExp),
     Bin(BinaryExp),
     Num(f64),
-    Var,
 }
 
 #[derive(Debug)]

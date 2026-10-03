@@ -2,8 +2,8 @@ use crate::lexer;
 use crate::structs::{self, Ast, Parser, Token, BinaryExp, Operator, UnaryExp, IdType, Node};
 
 fn parse_call(tree: &mut Ast, stream: &mut Parser) -> Result<usize, &'static str> {
-    let id = stream.iter.consume().unwrap().get_id();
-    match structs::id_type(id) {
+    let id_type = stream.iter.consume().unwrap().id_type();
+    match id_type {
         IdType::Un(op) => {
             let Some(Token::LPar) = stream.iter.consume() else {
                 return Err("Functions cannot be used as variable names");
@@ -38,9 +38,6 @@ fn parse_call(tree: &mut Ast, stream: &mut Parser) -> Result<usize, &'static str
         }
         IdType::Const(n) => {
             return Ok(tree.add(Node::Num(n)));
-        }
-        IdType::Var => {
-            return Ok(tree.add(Node::Var));
         }
         _ => {
             if let Some(Token::LPar) = stream.iter.peek() {
