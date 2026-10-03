@@ -1,8 +1,7 @@
 fn main() {
-    let expression = "pi t + 2";
-    let res = exprs::eval(expression);
-    match res {
-        Ok(val) => println!("{val}"),
+    let expression = "pi^2 / 6";
+    match exprs::eval(expression) {
+        Ok(res) => println!("{res}"),
         Err(msg) => println!("{msg}")
-    };
+    }
 }

@@ -21,22 +21,6 @@ impl<T: Copy + Clone + std::fmt::Debug> Scanner<T> {
 }
 
 #[derive(Debug)]
-pub struct Lexer {
-    pub iter: Scanner<char>,
-}
-
-impl Lexer {
-    pub fn new(input: &str) -> Lexer {
-        Lexer {
-            iter: Scanner {
-                source: input.chars().collect(),
-                cursor: 0,
-            },
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct Parser<'a> {
     pub iter: Scanner<Token<'a>>,
 }

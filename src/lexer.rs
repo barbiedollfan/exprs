@@ -1,64 +1,74 @@
-use crate::structs::{Lexer, Token};
+use crate::structs::{Token};
+
+fn is_numeric(c: char) -> bool {
+    c.is_ascii_digit() || c == '.'
+}
 
 pub fn tokenize<'a>(input: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
-    let mut stream = Lexer::new(input);
+    if input.trim().is_empty() {
+        return Err("Cannot parse an empty expression");
+    }
+    let mut stream = input.chars().enumerate().peekable();
     let mut tokens: Vec<Token> = Vec::new();
     loop {
-        let next = stream.iter.consume();
+        let Some(&(index, next)) = stream.peek() else {
+            tokens.push(Token::EOF);
+            return Ok(tokens);
+        };
         match next {
-            None => {
-                tokens.push(Token::EOF);
-                return Ok(tokens);
-            }
-            Some(c) if c.is_ascii_whitespace() => {}
-            Some(c) if c == '+' => tokens.push(Token::Plus),
-            Some(c) if c == '-' => tokens.push(Token::Minus),
-            Some(c) if c == '*' => tokens.push(Token::Mul),
-            Some(c) if c == '/' => tokens.push(Token::Div),
-            Some(c) if c == '%' => tokens.push(Token::Mod),
-            Some(c) if c == '^' => tokens.push(Token::Pow),
-            Some(c) if c == '(' => tokens.push(Token::LPar),
-            Some(c) if c == ')' => tokens.push(Token::RPar),
-            Some(c) if c == ',' => tokens.push(Token::Comma),
-            Some(c) if c.is_ascii_digit() => {
-                stream.iter.back();
-                let mut current: u64 = 0;
-                let mut decimals: Option<i32> = None;
-                while let Some(num) = stream.iter.consume() {
-                    if num.is_ascii_digit() {
-                        current = current * 10 + num.to_digit(10).unwrap() as u64;
-                        if let Some(d) = decimals {
-                            decimals = Some(d + 1);
-                        }
-                    } else if num == '.' {
-                        if decimals.is_some() {
-                            return Err("Invalid number");
-                        };
-                        decimals = Some(0);
-                    } else {
+            c if c.is_ascii_whitespace() => {},
+            c if c == '+' => tokens.push(Token::Plus),
+            c if c == '-' => tokens.push(Token::Minus),
+            c if c == '*' => tokens.push(Token::Mul),
+            c if c == '/' => tokens.push(Token::Div),
+            c if c == '%' => tokens.push(Token::Mod),
+            c if c == '^' => tokens.push(Token::Pow),
+            c if c == '(' => tokens.push(Token::LPar),
+            c if c == ')' => tokens.push(Token::RPar),
+            c if c == ',' => tokens.push(Token::Comma),
+            c if is_numeric(c) => {
+                stream.next();
+                let mut end_index = index;
+                while let Some(&(next_index, next_num)) = stream.peek() {
+                    if !is_numeric(next_num) {
                         break;
                     }
+                    end_index = next_index;
+                    stream.next();
                 }
-                stream.iter.back();
-                let value = if let Some(d) = decimals {
-                    current as f64 / 10f64.powi(d)
-                } else {
-                    current as f64
+                let Ok(num) = &input[index..=end_index].parse::<f64>() else {
+                    return Err("Failed to parse number");
                 };
-
-                tokens.push(Token::Num(value));
+                tokens.push(Token::Num(*num));
+                continue;
             }
-            Some(c) if c.is_ascii_alphabetic() => {
-                let start = stream.iter.cursor - 1;
-                while let Some(letter) = stream.iter.consume() {
-                    if !letter.is_ascii_alphabetic() {
+            c if c.is_ascii_alphabetic() => {
+                stream.next();
+                let mut end_index = index;
+                while let Some(&(next_index, next_char)) = stream.peek() {
+                    if !next_char.is_ascii_alphabetic() {
                         break;
                     }
+                    end_index = next_index;
+                    stream.next();
                 }
-                stream.iter.back();
-                tokens.push(Token::Id(&input[start..stream.iter.cursor]));
+                tokens.push(Token::Id(&input[index..=end_index]));
+                continue;
             }
             _ => return Err("Unknown character in input")
         }
+        stream.next();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_numeric() {
+        assert!(is_numeric('0'));
+        assert!(is_numeric('.'));
+        assert!(!is_numeric('a'));
     }
 }
