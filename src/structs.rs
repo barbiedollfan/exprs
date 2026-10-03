@@ -175,7 +175,7 @@ impl Ast {
                     Operator::Pow => results[*left].powf(results[*right]),
                     Operator::Min => results[*left].min(results[*right]),
                     Operator::Max => results[*left].max(results[*right]),
-                    Operator::Log => results[*left].log(results[*right]),
+                    Operator::Log => results[*right].log(results[*left]),
                     _ => unreachable!("Incorrect handling of binary expression"),
                 },
                 Node::Num(n) => *n,
@@ -196,7 +196,8 @@ pub enum Operator {
     Div,
     Mod,
     Pow,
-    // Arbitrary
+
+    // Polyary
     Minus,
 
     // Functions

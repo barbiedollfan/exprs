@@ -1,5 +1,5 @@
 use crate::lexer;
-use crate::structs::{self, Ast, Parser, Token, BinaryExp, Operator, UnaryExp, IdType, Node};
+use crate::structs::{Ast, Parser, Token, BinaryExp, Operator, UnaryExp, IdType, Node};
 
 fn parse_call(tree: &mut Ast, stream: &mut Parser) -> Result<usize, &'static str> {
     let id_type = stream.iter.consume().unwrap().id_type();
@@ -63,7 +63,7 @@ fn parse_factor(tree: &mut Ast, stream: &mut Parser) -> Result<usize, &'static s
             stream.iter.back();
             return parse_call(tree, stream);
         }
-        _ => return Err("Idek what you did to get here"), // This can trigger if the input is empty
+        _ => return Err("Idek what you did to get here"),
     }
 }
 
@@ -152,10 +152,8 @@ fn parse_exp(tree: &mut Ast, stream: &mut Parser) -> Result<usize, &'static str>
                 };
                 root = tree.add(Node::Bin(node));
             }
-            _ => {
-                stream.iter.back();
-                break;
-            }
+            Some(Token::EOF) => break,
+            _ => return Err("Invalid expression"),
         }
     }
     Ok(root)
