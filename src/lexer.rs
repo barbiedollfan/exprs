@@ -1,4 +1,43 @@
 use crate::structs::{Token};
+use std::iter::{Enumerate, Peekable};
+use std::str::Chars;
+
+
+#[derive(Debug)]
+struct Lexer<'a> {
+    iter: Peekable<Enumerate<Chars<'a>>>,
+}
+
+impl<'a> Lexer<'a> {
+    fn new(input: &'a str) -> Self {
+        Lexer {
+            iter: input.chars().enumerate().peekable(),
+        }
+    }
+
+    fn peek(&mut self) -> Option<&(usize, char)> {
+        self.iter.peek()
+    }
+
+    fn next(&mut self) -> Option<(usize, char)> {
+        self.iter.next()
+    }
+
+    fn get_substring<F>(&mut self, start_index: usize, f: F) -> usize
+    where 
+        F: Fn(char) -> bool
+    {
+        let mut end_index = start_index;
+        while let Some(&(next_index, next_element)) = self.peek() {
+            if !f(next_element) {
+                break;
+            }
+            end_index = next_index;
+            self.next();
+        }
+        end_index
+    }
+}
 
 fn is_numeric(c: char) -> bool {
     c.is_ascii_digit() || c == '.'
@@ -8,7 +47,7 @@ pub fn tokenize<'a>(input: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
     if input.trim().is_empty() {
         return Err("Cannot parse an empty expression");
     }
-    let mut stream = input.chars().enumerate().peekable();
+    let mut stream = Lexer::new(input);
     let mut tokens: Vec<Token> = Vec::new();
     loop {
         let Some(&(index, next)) = stream.peek() else {
@@ -27,15 +66,7 @@ pub fn tokenize<'a>(input: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
             c if c == ')' => tokens.push(Token::RPar),
             c if c == ',' => tokens.push(Token::Comma),
             c if is_numeric(c) => {
-                stream.next();
-                let mut end_index = index;
-                while let Some(&(next_index, next_num)) = stream.peek() {
-                    if !is_numeric(next_num) {
-                        break;
-                    }
-                    end_index = next_index;
-                    stream.next();
-                }
+                let end_index = stream.get_substring(index, |x| is_numeric(x));
                 let Ok(num) = &input[index..=end_index].parse::<f64>() else {
                     return Err("Failed to parse number");
                 };
@@ -43,15 +74,7 @@ pub fn tokenize<'a>(input: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
                 continue;
             }
             c if c.is_ascii_alphabetic() => {
-                stream.next();
-                let mut end_index = index;
-                while let Some(&(next_index, next_char)) = stream.peek() {
-                    if !next_char.is_ascii_alphabetic() {
-                        break;
-                    }
-                    end_index = next_index;
-                    stream.next();
-                }
+                let end_index = stream.get_substring(index, |x| x.is_ascii_alphabetic());
                 tokens.push(Token::Id(&input[index..=end_index]));
                 continue;
             }
