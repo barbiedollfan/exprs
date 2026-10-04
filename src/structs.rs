@@ -1,40 +1,7 @@
-#[derive(Debug)]
-pub struct Scanner<T> {
-    pub source: Vec<T>,
-    pub cursor: usize,
-}
-
-impl<T: Copy + Clone + std::fmt::Debug> Scanner<T> {
-    pub fn peek(&self) -> Option<T> {
-        self.source.get(self.cursor).copied()
-    }
-
-    pub fn consume(&mut self) -> Option<T> {
-        let consumed = self.peek();
-        self.cursor += 1;
-        consumed
-    }
-
-    pub fn back(&mut self) -> () {
-        self.cursor -= 1;
-    }
-}
-
-#[derive(Debug)]
-pub struct Parser<'a> {
-    pub iter: Scanner<Token<'a>>,
-}
-
-impl<'a> Parser<'a> {
-    pub fn new(input: Vec<Token>) -> Parser {
-        Parser {
-            iter: Scanner {
-                source: input,
-                cursor: 0,
-            },
-        }
-    }
-}
+const PI: f64 = 3.14159265358979323846264338327950288419716939937510;
+const E: f64 = 2.71828182845904523536028747135266249775724709369995;
+const MASCH: f64 = 0.57721566490153286060651209008240243104215933593992;
+const PHI: f64 = 1.61803398874989484820458683436563811772030917980576;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Token<'a> {
@@ -49,7 +16,6 @@ pub enum Token<'a> {
     LPar,
     RPar,
     Comma,
-    EOF,
 }
 
 impl<'a> Token<'a> {
@@ -120,7 +86,7 @@ impl Ast {
         end
     }
 
-    pub fn eval(&self) -> f64 {
+    pub fn fold(&self) -> f64 {
         let mut results: Vec<f64> = vec![0.; self.0.len()];
         for (index, node) in self.0.iter().enumerate() {
             let res = match node {
@@ -242,15 +208,10 @@ pub enum Operator {
     Log,
 }
 
-const PI: f64 = 3.14159265358979323846264338327950288419716939937510;
-const E: f64 = 2.71828182845904523536028747135266249775724709369995;
-const MASCH: f64 = 0.57721566490153286060651209008240243104215933593992;
-const PHI: f64 = 1.61803398874989484820458683436563811772030917980576;
-
 #[derive(Debug)]
 pub enum IdType {
-    Bin(Operator),
     Un(Operator),
+    Bin(Operator),
     Const(f64),
     None,
 }
