@@ -1,58 +1,45 @@
 use crate::lexer::{Lexer};
-use crate::structs::{Ast, Token, BinaryExp, Operator, UnaryExp, IdType, Node};
+use crate::structs::{Ast, Token, Node, Call, add, sub, mul, div, rem, neg, pow};
 use std::iter::Peekable;
 
 #[macro_export]
 macro_rules! assert_next {
     ($next:expr, $cmp:pat) => {
-        let Some(res) = $next else {
+        let Some(tok) = $next else {
             return Err("Incomplete expression");
         };
-        let $cmp = res? else {
+        let $cmp = tok? else {
             return Err("Missing something");
         };
     };
 
     ($next:expr) => {
-        let Some(res) = $next else {
+        let Some(tok) = $next else {
             return Err("Incomplete expression");
         };
     }
 }
 
 fn parse_call(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, &'static str> {
-    let id_type = stream.next().unwrap()?.id_type(); // Should never be looking into EOF
-    match id_type {
-        IdType::Un(op) => {
-            assert_next!(stream.next(), Token::LPar);
-            let arg = parse_exp(tree, stream)?;
-            assert_next!(stream.next(), Token::RPar);
-            let node = UnaryExp { op, child: arg };
-            return Ok(tree.add(Node::Un(node)));
-        }
-        IdType::Bin(op) => {
-            assert_next!(stream.next(), Token::LPar);
-            let first_arg = parse_exp(tree, stream)?;
-            assert_next!(stream.next(), Token::Comma);
-            let second_arg = parse_exp(tree, stream)?;
-            assert_next!(stream.next(), Token::RPar);
-            let node = BinaryExp {
-                op,
-                left: first_arg,
-                right: second_arg,
-            };
-            return Ok(tree.add(Node::Bin(node)));
-        }
-        IdType::Const(n) => {
-            return Ok(tree.add(Node::Num(n)));
-        }
-        _ => return Err("Incorrect identifier or something"),
-    }
+    let (op, arity) = stream.next().unwrap()?.call_type()?; // Should never be looking into EOF
+    let mut args = Vec::with_capacity(arity);
+    if arity > 0 { assert_next!(stream.next(), Token::LPar); };
+    for i in 0..arity {
+        args.push(parse_exp(tree, stream)?);
+        if i != arity - 1 { assert_next!(stream.next(), Token::Comma); };
+    };
+    if arity > 0 { assert_next!(stream.next(), Token::RPar); };
+    let node = Call {
+        op,
+        args,
+        arity,
+    };
+    Ok(tree.add(Node::Branch(node)))
 }
 
 fn parse_factor(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, &'static str> {
-    let &res = stream.peek().unwrap(); // Should never be looking into EOF
-    match res? {
+    let &tok = stream.peek().unwrap(); // Should never be looking into EOF
+    match tok? {
         Token::LPar => {
             stream.next();
             let root = parse_exp(tree, stream)?;
@@ -61,7 +48,7 @@ fn parse_factor(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, &
         }
         Token::Num(n) => {
             stream.next();
-            return Ok(tree.add(Node::Num(n)));
+            return Ok(tree.add(Node::Leaf(n)));
         }
         Token::Id(_) => return parse_call(tree, stream),
         _ => return Err("Idek what you did to get here")
@@ -69,30 +56,31 @@ fn parse_factor(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, &
 }
 
 fn parse_power(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, &'static str> {
-    let mut root: usize = parse_factor(tree, stream)?;
-    while let Some(&res) = stream.peek() {
-        let Token::Pow = res? else { break; };
+    let mut root = parse_factor(tree, stream)?;
+    while let Some(&tok) = stream.peek() {
+        let Token::Pow = tok? else { break; };
         stream.next();
-        let node = BinaryExp {
-            op: Operator::Pow,
-            left: root,
-            right: parse_power(tree, stream)?,
+        let node = Call {
+            op: pow,
+            args: vec![root, parse_power(tree, stream)?],
+            arity: 2,
         };
-        root = tree.add(Node::Bin(node));
+        root = tree.add(Node::Branch(node));
     }
     Ok(root)
 }
 
 fn parse_base(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, &'static str> {
     match stream.peek() {
-        Some(&res) => { 
-            if let Token::Minus = res? {
+        Some(&tok) => { 
+            if let Token::Minus = tok? {
                 stream.next();
-                let node = UnaryExp {
-                    op: Operator::Minus,
-                    child: parse_power(tree, stream)?,
+                let node = Call {
+                    op: neg,
+                    args: vec![parse_power(tree, stream)?],
+                    arity: 1,
                 };
-                return Ok(tree.add(Node::Un(node)));
+                return Ok(tree.add(Node::Branch(node)));
             }
         }
         None => {}
@@ -101,35 +89,35 @@ fn parse_base(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, &'s
 }
 
 fn parse_term(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, &'static str> {
-    let mut root: usize = parse_base(tree, stream)?;
-    while let Some(&res) = stream.peek() {
-        match res? {
+    let mut root = parse_base(tree, stream)?;
+    while let Some(&tok) = stream.peek() {
+        match tok? {
             Token::Mul => {
                 stream.next();
-                let node = BinaryExp {
-                    op: Operator::Mul,
-                    left: root,
-                    right: parse_base(tree, stream)?,
+                let node = Call {
+                    op: mul,
+                    args: vec![root, parse_base(tree, stream)?],
+                    arity: 2,
                 };
-                root = tree.add(Node::Bin(node));
+                root = tree.add(Node::Branch(node));
             }
             Token::Div => {
                 stream.next();
-                let node = BinaryExp {
-                    op: Operator::Div,
-                    left: root,
-                    right: parse_base(tree, stream)?,
+                let node = Call {
+                    op: div,
+                    args: vec![root, parse_base(tree, stream)?],
+                    arity: 2,
                 };
-                root = tree.add(Node::Bin(node));
+                root = tree.add(Node::Branch(node));
             }
             Token::Mod => {
                 stream.next();
-                let node = BinaryExp {
-                    op: Operator::Mod,
-                    left: root,
-                    right: parse_base(tree, stream)?,
+                let node = Call {
+                    op: rem,
+                    args: vec![root, parse_base(tree, stream)?],
+                    arity: 2,
                 };
-                root = tree.add(Node::Bin(node));
+                root = tree.add(Node::Branch(node));
             }
             _ => break,
         }
@@ -138,26 +126,26 @@ fn parse_term(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, &'s
 }
 
 fn parse_exp(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, &'static str> {
-    let mut root: usize = parse_term(tree, stream)?;
-    while let Some(&res) = stream.peek() {
-        match res? {
+    let mut root = parse_term(tree, stream)?;
+    while let Some(&tok) = stream.peek() {
+        match tok? {
             Token::Plus => {
                 stream.next();
-                let node = BinaryExp {
-                    op: Operator::Plus,
-                    left: root,
-                    right: parse_term(tree, stream)?,
+                let node = Call {
+                    op: add,
+                    args: vec![root, parse_term(tree, stream)?],
+                    arity: 2,
                 };
-                root = tree.add(Node::Bin(node));
+                root = tree.add(Node::Branch(node));
             }
             Token::Minus => {
                 stream.next();
-                let node = BinaryExp {
-                    op: Operator::Minus,
-                    left: root,
-                    right: parse_term(tree, stream)?,
+                let node = Call {
+                    op: sub,
+                    args: vec![root, parse_term(tree, stream)?],
+                    arity: 2,
                 };
-                root = tree.add(Node::Bin(node));
+                root = tree.add(Node::Branch(node));
             }
             _ => break,
         }

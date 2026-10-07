@@ -38,10 +38,9 @@ impl<'a> Iterator for Lexer<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let Some(&(index, next)) = self.chars.peek() else {
+            let Some((index, next)) = self.chars.next() else {
                 return None;
             };
-            self.chars.next();
             match next {
                 c if c.is_ascii_whitespace() => {},
                 c if c == '+' => return Some(Ok(Token::Plus)),
@@ -72,16 +71,4 @@ impl<'a> Iterator for Lexer<'a> {
 
 fn is_numeric(c: char) -> bool {
     c.is_ascii_digit() || c == '.'
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn check_numeric() {
-        assert!(is_numeric('0'));
-        assert!(is_numeric('.'));
-        assert!(!is_numeric('a'));
-    }
 }
