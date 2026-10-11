@@ -1,5 +1,5 @@
 use crate::lexer::{Lexer};
-use crate::structs::{Ast, Token, TokenKind, Error, Span, Node, Call, add, sub, mul, div, rem, neg, pow};
+use crate::structs::{Ast, Token, TokenKind, Error, Span, Node, Op, Fptr};
 use std::iter::Peekable;
 
 #[macro_export]
@@ -21,20 +21,19 @@ macro_rules! assert_next {
 }
 
 fn parse_call(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, Error> {
-    let (op, arity) = stream.next().unwrap()?.call_type()?; // Should never be looking into EOF
-    let mut args = Vec::with_capacity(arity);
-    if arity > 0 { assert_next!(stream.next(), TokenKind::LPar); };
-    for i in 0..arity {
+    let fptr = stream.next().unwrap()?.call_type()?; // Should never be looking into EOF
+    let mut args = Vec::with_capacity(fptr.arity);
+    if fptr.arity > 0 { assert_next!(stream.next(), TokenKind::LPar); };
+    for i in 0..fptr.arity {
         args.push(parse_exp(tree, stream)?);
-        if i != arity - 1 { assert_next!(stream.next(), TokenKind::Comma); };
+        if i != fptr.arity - 1 { assert_next!(stream.next(), TokenKind::Comma); };
     };
-    if arity > 0 { assert_next!(stream.next(), TokenKind::RPar); };
-    let node = Call {
-        op,
+    if fptr.arity > 0 { assert_next!(stream.next(), TokenKind::RPar); };
+    let node = Node::Call {
+        proc: Op::Func(fptr),
         args,
-        arity,
     };
-    Ok(tree.add(Node::Branch(node)))
+    Ok(tree.add(node))
 }
 
 fn parse_factor(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, Error> {
@@ -60,12 +59,11 @@ fn parse_power(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, Er
     while let Some(tok) = stream.peek() {
         let TokenKind::Pow = tok.clone()?.kind else { break; };
         stream.next();
-        let node = Call {
-            op: pow,
+        let node = Node::Call {
+            proc: Op::Exp,
             args: vec![root, parse_power(tree, stream)?],
-            arity: 2,
         };
-        root = tree.add(Node::Branch(node));
+        root = tree.add(node);
     }
     Ok(root)
 }
@@ -75,12 +73,11 @@ fn parse_base(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, Err
         Some(tok) => { 
             if let TokenKind::Minus = tok.clone()?.kind {
                 stream.next();
-                let node = Call {
-                    op: neg,
+                let node = Node::Call {
+                    proc: Op::Neg,
                     args: vec![parse_power(tree, stream)?],
-                    arity: 1,
                 };
-                return Ok(tree.add(Node::Branch(node)));
+                return Ok(tree.add(node));
             }
         }
         None => {}
@@ -94,30 +91,27 @@ fn parse_term(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, Err
         match tok.clone()?.kind {
             TokenKind::Mul => {
                 stream.next();
-                let node = Call {
-                    op: mul,
+                let node = Node::Call {
+                    proc: Op::Mul,
                     args: vec![root, parse_base(tree, stream)?],
-                    arity: 2,
                 };
-                root = tree.add(Node::Branch(node));
+                root = tree.add(node);
             }
             TokenKind::Div => {
                 stream.next();
-                let node = Call {
-                    op: div,
+                let node = Node::Call {
+                    proc: Op::Div,
                     args: vec![root, parse_base(tree, stream)?],
-                    arity: 2,
                 };
-                root = tree.add(Node::Branch(node));
+                root = tree.add(node);
             }
             TokenKind::Mod => {
                 stream.next();
-                let node = Call {
-                    op: rem,
+                let node = Node::Call {
+                    proc: Op::Mod,
                     args: vec![root, parse_base(tree, stream)?],
-                    arity: 2,
                 };
-                root = tree.add(Node::Branch(node));
+                root = tree.add(node);
             }
             _ => break,
         }
@@ -131,21 +125,19 @@ fn parse_exp(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, Erro
         match tok.clone()?.kind {
             TokenKind::Plus => {
                 stream.next();
-                let node = Call {
-                    op: add,
+                let node = Node::Call {
+                    proc: Op::Plus,
                     args: vec![root, parse_term(tree, stream)?],
-                    arity: 2,
                 };
-                root = tree.add(Node::Branch(node));
-            }
+                root = tree.add(node);
+            },
             TokenKind::Minus => {
                 stream.next();
-                let node = Call {
-                    op: sub,
-                    args: vec![root, parse_term(tree, stream)?],
-                    arity: 2,
+                let node = Node::Call { 
+                    proc: Op::Minus, 
+                    args: vec![root, parse_term(tree, stream)?]
                 };
-                root = tree.add(Node::Branch(node));
+                root = tree.add(node);
             }
             _ => break,
         }

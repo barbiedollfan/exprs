@@ -1,5 +1,5 @@
 fn main() {
-    let expression = "2 + 1. + 1";
+    let expression = "";
     match exprs::eval(expression) {
         Ok(res) => println!("{res}"),
         Err(msg) => println!("{msg}")
