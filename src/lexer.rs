@@ -1,6 +1,6 @@
 use std::iter::{Enumerate, Peekable};
 use std::str::Chars;
-use crate::structs::{Token, TokenKind, Error, Span};
+use crate::structs::{Token, TokenKind, Error, ErrorKind};
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
@@ -41,8 +41,7 @@ impl<'a> Iterator for Lexer<'a> {
                 return None;
             };
 
-            let tok = |kind, end| Some(Ok(Token {kind, span: Span {start: index, len: end - index}}));
-            let un_tok = |kind| tok(kind, index + 1);
+            let un_tok = |kind| Some(Ok(Token {kind, span: index..index+1}));
 
             match next {
                 c if c.is_ascii_whitespace() => {},
@@ -57,17 +56,19 @@ impl<'a> Iterator for Lexer<'a> {
                 ',' => return un_tok(TokenKind::Comma),
                 c if is_numeric(c) => {
                     let end_index = self.get_substring(index, |x| is_numeric(x));
-                    let num = &self.input[index..end_index];
+                    let span = index..end_index;
+                    let num = &self.input[span.clone()];
                     let Ok(parsed) = num.parse::<f64>() else {
-                        return Some(Err(Error::InvalidNum(num.to_string())));
+                        return Some(Err(Error {kind: ErrorKind::InvalidNum(num.to_string()), span: span.clone()}));
                     };
-                    return tok(TokenKind::Num(parsed), end_index);
+                    return Some(Ok(Token {kind: TokenKind::Num(parsed), span: span.clone()}));
                 }
                 c if c.is_ascii_alphabetic() => {
                     let end_index = self.get_substring(index, |x| x.is_ascii_alphabetic());
-                    return tok(TokenKind::Id(&self.input[index..end_index]), end_index);
+                    let span = index..end_index;
+                    return Some(Ok(Token {kind: TokenKind::Id(&self.input[span.clone()]), span: span.clone()}));
                 }
-                _ => return Some(Err(Error::UnknownChar(next)))
+                _ => return Some(Err(Error {kind: ErrorKind::UnknownChar(next), span: index..index+1}))
             }
         }
     }

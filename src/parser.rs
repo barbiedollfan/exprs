@@ -1,21 +1,21 @@
 use crate::lexer::{Lexer};
-use crate::structs::{Ast, Token, TokenKind, Error, Span, Node, Op, Fptr};
+use crate::structs::{Ast, TokenKind, Error, ErrorKind, Node, Op};
 use std::iter::Peekable;
 
 #[macro_export]
 macro_rules! assert_next {
     ($next:expr, $cmp:pat) => {
         let Some(tok) = $next else {
-            return Err(Error::UnfinishedExpr);
+            return Err(Error {kind: ErrorKind::UnfinishedExpr, span: 0..0});
         };
         let $cmp = tok?.kind else {
-            return Err(Error::UnfinishedExpr);
+            return Err(Error {kind: ErrorKind::UnfinishedExpr, span: 0..0});
         };
     };
 
     ($next:expr) => {
         let Some(tok) = $next else {
-            return Err(Error::UnfinishedExpr);
+            return Err(Error {kind: ErrorKind::UnfinishedExpr, span: 0..0});
         };
     }
 }
@@ -50,7 +50,7 @@ fn parse_factor(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, E
             return Ok(tree.add(Node::Leaf(n)));
         }
         TokenKind::Id(_) => return parse_call(tree, stream),
-        _ => return Err(Error::Unknown)
+        _ => return Err(Error {kind: ErrorKind::Unknown, span: 0..0 })
     }
 }
 
@@ -146,14 +146,14 @@ fn parse_exp(tree: &mut Ast, stream: &mut Peekable<Lexer>) -> Result<usize, Erro
 }
 
 fn parse(input: &str) -> Result<Ast, Error> {
+    let mut tree = Ast::new();
     if input.trim().is_empty() {
-        return Err(Error::EmptyExpr);
+        return Ok(tree);
     }
     let mut stream = Lexer::new(input).peekable();
-    let mut tree = Ast(Vec::new());
     let _ = parse_exp(&mut tree, &mut stream)?;
-    let None = stream.next() else {
-        return Err(Error::UnfinishedExpr);
+    if let Some(tok) = stream.next() {
+        return Err(Error {kind: ErrorKind::UnexpectedExpr, span: tok?.span.start..input.len()});
     };
     Ok(tree)
 }
